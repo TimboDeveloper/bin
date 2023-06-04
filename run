@@ -1,0 +1,11 @@
+#!/bin/sh
+
+readonly run_path=./packages/$1/src
+if [ ! -d "$run_path" ]; then
+    echo "Package '$1' not found"
+    exit 1
+fi
+
+chmod +x "$run_path/$1"
+
+./packages/$1/src/$1
