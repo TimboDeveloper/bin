@@ -1,8 +1,11 @@
 #!/bin/sh
 
+# Load RGB libs
+. "$(dirname -- "$0")/packages/rgb/src/rgb"
+
 readonly run_path=./packages/$1/src
 if [ ! -d "$run_path" ]; then
-    echo "Package '$1' not found"
+    rgb "Package '$1' not found" $RED
     exit 1
 fi
 
