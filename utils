@@ -1,0 +1,65 @@
+#!/bin/sh
+
+BLUE="121 99 231"
+BACKGROUND="25 22 34"
+CURRENT_LINE="68 71 90"
+SELECTION="65 65 77"
+FOREGROUND="225 225 230"
+COMMENT="72 60 103"
+CYAN="120 209 225"
+GREEN="103 228 128"
+ORANGE="232 158 100"
+GOLD="255 130 0"
+PINK="255 121 198"
+PURPLE="152 139 199"
+RED="233 99 121"
+YELLOW="231 222 121"
+TRUE_GREEN="0 255 0"
+TRUE_BLUE="0 0 255"
+TRUE_RED="255 0 0"
+
+CLOSE="\x1b[0m"
+
+toAnsi() {
+    string="$1"
+    elements=($string)
+    total_elements=${#elements[@]}
+    parsedAnsiString=""
+
+    for index in "${!elements[@]}"; do
+        color="${elements[index]}"
+
+        if [[ $index -eq $((total_elements - 1)) ]]; then
+            parsedAnsiString+="$color"
+        else
+            parsedAnsiString+="$color;"
+        fi
+    done 
+
+    echo "$parsedAnsiString"
+}
+
+SUT_MESSAGE="sut"
+
+sut() {
+  echo -e "\nSUT: $SUT"
+}
+
+expect() {
+  echo -e "EXPECT: $EXPECT"
+}
+
+display() {
+    echo -e "\x1b[1m\x1b[38;2;$(toAnsi "$GOLD")m\"$(basename -- $0)\" Tests:\x1b[0m"
+}
+
+desc() {
+  echo -e "\x1b[38;2;$(toAnsi "$BLUE")m${1}\x1b[0m"
+}
+
+it() {
+  printf "$title $(desc "${@}")"
+}
+
+title=$(echo -e "\x1b[1m\x1b[38;2;$(toAnsi "$GOLD")m[Test]\x1b[0m")
+error=$(echo -e "\x1b[1m\x1b[31m[Error]\x1b[0m")
