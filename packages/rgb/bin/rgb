@@ -1,0 +1,5 @@
+#!/bin/sh
+
+. $(dirname -- $0)/../$(basename -- $0)
+
+rgb $@
