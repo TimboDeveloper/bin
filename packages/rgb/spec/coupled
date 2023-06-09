@@ -1,0 +1,25 @@
+#!/bin/sh
+
+test_1() {
+    local SUT=$(rgb "$SUT_MESSAGE $(rgb "$SUT_MESSAGE" $YELLOW) $SUT_MESSAGE" $RED)
+    
+    local RED="\x1b[38;2;$(toAnsi "$RED")m"
+    local YELLOW="\x1b[38;2;$(toAnsi "$YELLOW")m"
+    
+    local EXPECT=$(echo -e "$RED$SUT_MESSAGE $YELLOW$SUT_MESSAGE$RED $SUT_MESSAGE\x1b[0m")
+
+    assertSame "should print YELLOW color inside a RED color and keep RED color after yellow" "$EXPECT" "$SUT"
+}
+
+test_2() {
+    ergb() {
+        echo -e "\x1b[38;2;$(toAnsi "${2}")m${1}$CLOSE"
+    }
+
+    local SUT=$(echo -e "$(rgb "m" $RED )$(rgb "u" $GREEN)$(rgb "l" $BLUE)$(rgb "t" $YELLOW)$(rgb "i" $PURPLE)$(rgb p $PINK)$(rgb l $ORANGE)$(rgb e $TRUE_GREEN)$(rgb s $COMMENT) $(rgb c $CYAN)$(rgb o $GREEN)$(rgb l $ORANGE)$(rgb o $GOLD)$(rgb r $PINK)$(rgb s $PURPLE)$(rgb ! $RED)$(rgb ! $YELLOW)$(rgb ! $TRUE_RED)$(rgb ! $TRUE_GREEN)$(rgb ! $TRUE_BLUE)")
+    local EXPECT=$(echo -e "$(ergb m "$RED" )$(ergb u "$GREEN")$(ergb l "$BLUE")$(ergb t "$YELLOW")$(ergb i "$PURPLE")$(ergb p "$PINK")$(ergb l "$ORANGE")$(ergb e "$TRUE_GREEN")$(ergb s "$COMMENT") $(ergb c "$CYAN")$(ergb o "$GREEN")$(ergb l "$ORANGE")$(ergb o "$GOLD")$(ergb r "$PINK")$(ergb s "$PURPLE")$(ergb ! "$RED")$(ergb ! "$YELLOW")$(ergb ! "$TRUE_RED")$(ergb ! "$TRUE_GREEN")$(ergb ! "$TRUE_BLUE")")
+
+    assertSame "should print multiples colors" "$SUT" "$EXPECT"
+}
+
+. $ROOT_PATH/shunit2
