@@ -35,6 +35,12 @@ request_accept() {
     fi
 }
 
+info() {
+    if [[ $VERBOSE_MODE ]]; then
+        echo $@
+    fi
+}
+
 find_help() {
     local help_target=${1}
     local help_file="./help_messages.md"

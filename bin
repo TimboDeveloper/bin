@@ -19,6 +19,10 @@ if [[ ! -z $trigged_help ]]; then
             find_help force
             break
         ;;
+        --verbose|-v)
+            find_help verbose
+            break
+        ;;
         *)
             if [[ $trigged_help != $0 ]]; then
                 echo "error: command '$trigged_help' not found"
@@ -33,8 +37,8 @@ if [[ ! -z $trigged_help ]]; then
 fi
 
 options=$(getopt \
-    -o h \
-    --long help,force,yes \
+    -o hv \
+    --long help,force,yes,verbose \
     --name "error" \
     --unquoted \
     -- "$@"
@@ -63,6 +67,10 @@ while true; do
         ;;
         --yes)
             YES_MODE=true
+            shift
+        ;;
+        --verbose|-v)
+            VERBOSE_MODE=true
             shift
         ;;
         *)
