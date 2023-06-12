@@ -1,11 +1,23 @@
 #!/bin/sh
 
 create_dir() {
+    local dirPath=${1}
+
     info "creating dir: $dirPath"
+    mkdir -p $dirPath
 }
+
 create_file() {
+    local filePath=${1}
+    local fileContent=${2}
+
     info "creating file: $filePath"
+    touch $filePath
+    chmod +x $filePath
+
+    echo "$fileContent" >> $filePath
 }
+
 request_accept() {
     ask() {    
         printf "Do you really want to do this? (y/n): "

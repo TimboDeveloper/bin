@@ -98,6 +98,27 @@ create_package() {
         echo 'if you want to override use the --force option'
         exit 0
     fi
+
+    create_dir $package_target/bin
+    create_file $package_target/$package_target_name "$(
+        echo '#!/bin/sh'
+        echo
+        echo "$package_target_name() {"
+        echo "    echo "Happy hacking!""
+        echo "}"
+    )"
+    create_file $package_target/bin/$package_target_name "$(
+        echo '#!/bin/sh'
+        echo
+        echo "source ../$package_target_name"
+        echo "$package_target_name" '$@'
+    )"
+
+    cd $package_target/bin
+    ./$package_target_name
+    cd $real_script_path
+
+    echo "bin: the package '$package_target_name' has been created"
 }
 
 case $command in
