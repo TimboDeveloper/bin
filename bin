@@ -1,0 +1,129 @@
+#!/bin/sh
+original_path=$PWD
+package_dir="packages"
+real_script_path=$(dirname "$(realpath "$0")")
+
+cd $real_script_path
+
+source utils
+
+trigged_help=$(man_help $@)
+
+if [[ ! -z $trigged_help ]]; then
+    case $trigged_help in
+        create|c)
+            find_help create
+            break
+        ;;
+        --force)
+            find_help force
+            break
+        ;;
+        *)
+            if [[ $trigged_help != $0 ]]; then
+                echo "error: command '$trigged_help' not found"
+                echo
+            fi
+
+            find_help default
+            break
+        ;;
+    esac
+    exit 0
+fi
+
+options=$(getopt \
+    -o h \
+    --long help,force,yes \
+    --name "error" \
+    --unquoted \
+    -- "$@"
+)
+
+if [[ $? = 1 ]]; then
+    exit 0
+fi
+
+eval set -- "$options"
+
+temp=()
+for option in $options; do
+    if [[ "$option" != "--" ]]; then
+        temp+=("$option")
+    fi
+done
+
+set -- "${temp[@]}"
+
+while true; do
+    case $1 in
+        --force)
+            FORCE_MODE=true
+            shift
+        ;;
+        --yes)
+            YES_MODE=true
+            shift
+        ;;
+        *)
+            break
+        ;;
+    esac
+done
+
+readonly command=$1
+
+create_package() {
+    local package_target=($real_script_path/$package_dir/$1)
+
+    create_dir() {
+        mkdir -p $package_target
+        echo "bin: the package '$1' has been created at '$package_target'"
+    }
+
+    if [ ! -d $package_target ]; then
+        create_dir $package_target
+    elif [[ $FORCE_MODE = true ]]; then
+        if request_accept; then
+            rm -r $package_target
+            create_dir $package_target
+        fi
+    else
+        echo "error: the package '$1' already exist"
+        echo 'if you want to override use the --force option'
+        exit 0
+    fi
+}
+
+case $command in
+    create|c)
+        shift
+
+        if has_outrun 1 $@; then
+            echo "error: the create command expects 1 argument"
+            echo
+            find_help create
+            exit 0    
+        fi
+
+        readonly package_name=$1
+
+        if [[ -z $package_name ]]; then
+            echo "error: package name not provided"
+            echo
+            find_help create
+            exit 0
+        fi
+
+        create_package $package_name
+        break
+    ;;
+    *)
+        if [[ ! -z $command ]]; then
+            echo "error: command '$command' not found"
+            echo
+        fi
+        find_help default
+        break
+    ;;
+esac

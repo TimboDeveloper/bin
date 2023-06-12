@@ -1,65 +1,95 @@
 #!/bin/sh
 
-BLUE="121 99 231"
-BACKGROUND="25 22 34"
-CURRENT_LINE="68 71 90"
-SELECTION="65 65 77"
-FOREGROUND="225 225 230"
-COMMENT="72 60 103"
-CYAN="120 209 225"
-GREEN="103 228 128"
-ORANGE="232 158 100"
-GOLD="255 130 0"
-PINK="255 121 198"
-PURPLE="152 139 199"
-RED="233 99 121"
-YELLOW="231 222 121"
-TRUE_GREEN="0 255 0"
-TRUE_BLUE="0 0 255"
-TRUE_RED="255 0 0"
+request_accept() {
+    ask() {    
+        printf "Do you really want to do this? (y/n): "
+    }
 
-CLOSE="\x1b[0m"
-
-toAnsi() {
-    string="$1"
-    elements=($string)
-    total_elements=${#elements[@]}
-    parsedAnsiString=""
-
-    for index in "${!elements[@]}"; do
-        color="${elements[index]}"
-
-        if [[ $index -eq $((total_elements - 1)) ]]; then
-            parsedAnsiString+="$color"
-        else
-            parsedAnsiString+="$color;"
-        fi
-    done 
-
-    echo "$parsedAnsiString"
+    if [[ -z $YES_MODE ]]; then
+        ask
+        while true; do
+            read input
+            uppercase_input=${input^^}
+            
+            case $uppercase_input in
+                YES|Y)
+                    return 0
+                    break
+                ;;
+                NO|N)
+                    echo "Operation cancelled"
+                    return 1
+                    break
+                ;;
+                *)
+                    if [[ $uppercase_input == '' ]]; then
+                        echo "Operation cancelled"
+                        return 1
+                        break
+                    fi
+                    echo "error: wrong response. Please answer with yes or no"
+                    ask
+                ;;
+            esac
+        done
+    fi
 }
 
-SUT_MESSAGE="sut"
+find_help() {
+    local help_target=${1}
+    local help_file="./help_messages.md"
 
-sut() {
-  echo -e "\nSUT: $SUT"
+    if [ ! -f "$help_file" ]; then
+        echo "error: help messages files is not avaliable"
+        exit 0
+    fi
+
+    text=$(cat $help_file)
+
+    if [[ $text =~ \[group-start\]:\ \<\>\ \($help_target\) ]]; then
+        extracted_text=$(echo "$text" | sed -n "/\[group-start\]: <> ($help_target)/,/\[group-end\]: <> ($help_target)/ { /(\[group-start\]|\[group-end\]): <> ($help_target)/!p }" | sed '1d;$d')
+        echo "$extracted_text"
+    else
+        echo "error: cannot find '$help_target' help message"
+    fi
 }
 
-expect() {
-  echo -e "EXPECT: $EXPECT"
+man_help() {
+    for ((i=0; i<=${#@}; i++)); do
+        case ${@:i:1} in
+            --help | -h)
+                last_argument=$((i - 1))
+                echo ${@:$last_argument:1}
+                break
+            ;;
+        esac
+    done
 }
 
-display() {
-    echo -e "\x1b[1m\x1b[38;2;$(toAnsi "$GOLD")m\"$(basename -- $0)\" Tests:\x1b[0m"
+isNumber() {
+    local value=${1}
+    local regex='^[+-]?[0-9]+([.][0-9]+)?$'
+
+    if [[ $value =~ $regex ]]; then
+        return 1
+    else
+        return 0
+    fi
 }
 
-desc() {
-  echo -e "\x1b[38;2;$(toAnsi "$BLUE")m${1}\x1b[0m"
-}
+has_outrun() {
+    local max_arguments=${1}
+    shift
+    local num_arguments=$#
 
-it() {
-  printf "$title $(desc "${@}")"
-}
+    if isNumber $max_arguments; then
+        echo "error: the provided value '$max_arguments' is not a number"
+        exit 0
+    fi
 
-title=$(echo -e "\x1b[1m\x1b[38;2;$(toAnsi "$GOLD")m[Test]\x1b[0m")
-error=$(echo -e "\x1b[1m\x1b[31m[Error]\x1b[0m")
+    if [ $max_arguments -ge $# ]; then
+        return 1
+    else
+        return 0
+    fi
+}
