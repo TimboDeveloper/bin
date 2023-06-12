@@ -92,6 +92,8 @@ create_package() {
         if request_accept; then
             rm -r $package_target
             create_dir $package_target
+        else
+            exit 0
         fi
     else
         echo "error: the package '$package_target_name' already exist"
