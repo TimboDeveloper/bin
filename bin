@@ -82,12 +82,9 @@ done
 readonly command=$1
 
 create_package() {
-    local package_target=($real_script_path/$package_dir/$1)
-
-    create_dir() {
-        mkdir -p $package_target
-        echo "bin: the package '$1' has been created at '$package_target'"
-    }
+    local package_target_name=${1}
+    local package_target=($real_script_path/$package_dir/$package_target_name)
+    info "creating package: $package_target_name"
 
     if [ ! -d $package_target ]; then
         create_dir $package_target
@@ -97,7 +94,7 @@ create_package() {
             create_dir $package_target
         fi
     else
-        echo "error: the package '$1' already exist"
+        echo "error: the package '$package_target_name' already exist"
         echo 'if you want to override use the --force option'
         exit 0
     fi

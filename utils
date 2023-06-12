@@ -1,5 +1,11 @@
 #!/bin/sh
 
+create_dir() {
+    info "creating dir: $dirPath"
+}
+create_file() {
+    info "creating file: $filePath"
+}
 request_accept() {
     ask() {    
         printf "Do you really want to do this? (y/n): "
