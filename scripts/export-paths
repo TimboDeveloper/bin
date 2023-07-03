@@ -1,0 +1,25 @@
+#!/bin/sh
+
+SCRIPT_PATH=$(realpath $(dirname $0))
+
+path() {
+    local pathDir=${1}
+    echo "Exporting package: $PWD/$pathDir"
+    export PATH="$PWD/$pathDir:$PATH"
+}
+
+getPackages() {
+    find src -mindepth 1 -maxdepth 1 -type d | while read package; do
+        path $package
+    done
+}
+
+if [ -z $ALREADY_EXPORT ]; then
+    path scripts
+
+    getPackages
+else
+    echo "all packages already is in \$PATH"
+fi
+
+export ALREADY_EXPORT=true
