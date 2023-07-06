@@ -4,4 +4,6 @@
 
 packages/binara/binara
 
+packages/core/teste
 packages/core/require
+packages/core/teste2
