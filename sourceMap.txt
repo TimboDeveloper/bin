@@ -2,10 +2,6 @@
 #
 # This file maps the source code of all packages to the 'binara' CLI to enable installation of the packages from https://raw.githubusercontent.com/
 
-<packages/binara>
 packages/binara/binara
-</packages/binara>
 
-<packages/core>
 packages/core/require
-</packages/core>

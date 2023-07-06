@@ -16,17 +16,13 @@ generateSourceMap() {
 
         if [[ $lastPackageName != $packageName ]]; then
             if ! [ -z $lastPackageName ]; then
-                echo "</$lastPackageName>"
                 echo
             fi
-            echo "<$packageName>"
             lastPackageName=$packageName
         fi
         
         echo "$file"
     done
-
-    echo "</$lastPackageName>"
 }
 
 rm -rf "./$SOURCE_MAP_TARGET"
