@@ -18,6 +18,9 @@ if [ -z $ALREADY_EXPORT ]; then
     path scripts
 
     getPackages
+
+    export CORE="$PWD/$PACKAGES_DIR/core/core"
+    export BINARA_HOME="$PWD"
 else
     echo "all packages already is in \$PATH"
 fi

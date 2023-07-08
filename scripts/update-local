@@ -7,12 +7,19 @@ BIN_DIR="bin"
 PACKAGES_DIR="packages"
 SOURCE_MAP_FILE="sourceMap.txt"
 
-RAW_URL="https://raw.githubusercontent.com"
-OWNER_USER="timbo-dev"
-REPOSITORY_NAME="binara"
-BRANCH="main"
+createDir() {
+    local location=${1}
+    echo "Creating dir: $location"
+    mkdir -p $location
+}
 
-ROOT_PATH=$PWD
+cloneFile() {
+    local from=${1}
+    local to=${2}
+
+    echo "Cloning file: '$from'"
+    cp -r $from $to
+}
 
 home() {
     local path=${1}
@@ -29,36 +36,6 @@ package() {
     echo $(home $PACKAGES_DIR/$path)
 }
 
-downloadFile() {
-    local filePath=${1}
-
-    if ! [ -z $2 ]; then
-        local output="--output-document ${2}"
-    fi
-
-    wget --quiet                             \
-         --show-progress                     \
-         "$RAW_URL/$OWNER_USER/$REPOSITORY_NAME/$BRANCH/$filePath" $output
-}
-
-downloadPackage() {
-    local packages=$(getSource "${1}")
-    local lastPath=$PWD
-    
-    cd $ROOT_PATH && cd $(package)
-
-    for package in $packages; do
-        folderPackage=$(dirname $package)
-        packagePath=$(echo $package | sed -E "s/$PACKAGES_DIR\///g")
-
-        mkdir -p $BINARA_HOME/$folderPackage
-        downloadFile $package $packagePath
-    done
-
-    cd $lastPath
-    echo
-}
-
 makeLinkBin() {
     local bin=${1}
     local linkTarget="$(bin $(basename $bin))"
@@ -67,50 +44,16 @@ makeLinkBin() {
     ln -sf "$bin" "$linkTarget"
 }
 
-getSource() {
-    local packageTarget=${1}
-    
-    if ! [ -z ${2} ]; then
-        local fileTarget="/${2}"
-    fi
-    
-    local contentFile=$(cat $(home $SOURCE_MAP_FILE) | grep "$PACKAGES_DIR/$packageTarget$fileTarget")
-    echo "$contentFile"
-}
 
-createDir() {
-    local location=${1}
-    echo "Creating dir: $location"
-    mkdir -p $location
-}
-
-if [ -d $BINARA_HOME ]; then
-    echo "error: '$BINARA_HOME' already exists, remove it to reinstall"
-    exit 1
-fi
-
-WGET_COMMAND=$(whereis wget)
-
-if [ "$WGET_COMMAND" == "wget:" ]; then
-    echo "error: wget command not found"
-    echo "first install wget to continue"
-    exit 1
-fi
+echo "removing: '$HOME/.binara'"
+rm -rf $BINARA_HOME
 
 createDir $(home)
 createDir $(bin)
 createDir $(package)
 
-echo
-
-cd $BINARA_HOME
-
-downloadFile $SOURCE_MAP_FILE $SOURCE_MAP_FILE
-
-echo
-
-downloadPackage core
-downloadPackage binara
+cloneFile sourceMap.txt $(home)
+cloneFile packages $(home)
 
 makeLinkBin $(package binara/binara)
 makeLinkBin $(package core/core)
@@ -138,6 +81,7 @@ if [ ! -z $SHELL_NAME ]; then
     RC_CONTENT=$(cat "$RC_PATH")
     EXPORT_BINARA_HOME='export BINARA_HOME=$HOME/.binara'
     EXPORT_BINARA_BIN_PATH='export PATH="$BINARA_HOME/bin:$PATH"'
+    CORE_PATH='export CORE="$BINARA_HOME/bin/core"'
 
     if ! [[ "$RC_CONTENT" =~ "$EXPORT_BINARA_HOME" ]]; then
         echo $EXPORT_BINARA_HOME >> $RC_PATH
@@ -145,6 +89,10 @@ if [ ! -z $SHELL_NAME ]; then
 
     if ! [[ "$RC_CONTENT" =~ "$EXPORT_BINARA_BIN_PATH" ]]; then
         echo $EXPORT_BINARA_BIN_PATH >> $RC_PATH
+    fi
+
+    if ! [[ "$RC_CONTENT" =~ "$CORE_PATH" ]]; then
+        echo $CORE_PATH >> $RC_PATH
     fi
 else
     echo "error: shell name not found."
