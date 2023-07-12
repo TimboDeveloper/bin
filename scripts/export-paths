@@ -1,28 +1,30 @@
 #!/bin/sh
-PACKAGES_DIR="packages"
-SCRIPT_PATH=$(realpath $(dirname $0))
 
-path() {
-    local pathDir=${1}
-    echo "Exporting package: $PWD/$pathDir"
-    export PATH="$PWD/$pathDir:$PATH"
-}
-
-getPackages() {
-    find $PACKAGES_DIR -mindepth 1 -maxdepth 1 -type d | while read package; do
-        path $package
-    done
-}
-
-if [ -z $ALREADY_EXPORT ]; then
-    path scripts
-
-    getPackages
-
-    export CORE="$PWD/$PACKAGES_DIR/core/core"
-    export BINARA_HOME="$PWD"
-else
-    echo "all packages already is in \$PATH"
+if ! [ -z $ALREADY_EXPORTED ]; then
+    echo "error: the packages already been exported"
+    echo "restart the environment process first"
 fi
 
-export ALREADY_EXPORT=true
+addPath() {
+    local filePath=${1}
+
+    if ! [ -d "$filePath" ]; then
+        echo "error: the provided file '$filePath' does not exist"
+    fi
+
+    echo "Exporting: '$filePath'"
+    export PATH="$filePath:$PATH"
+}
+
+if ! [ -d "$PWD/bin" ]; then
+    echo "error: the bin directory does not exist"
+    echo "please run the Makefile first"
+fi
+
+bin_targets=$(sh -c "ls $PWD/bin")
+
+addPath $PWD/scripts
+
+for bin in $bin_targets; do
+    addPath $PWD/bin/$bin
+done

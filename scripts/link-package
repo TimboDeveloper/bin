@@ -1,0 +1,28 @@
+#!/bin/sh
+
+readonly package_1=$1
+readonly package_2=$2
+
+if [ -z "$package_1" ] || [ -z "$package_2" ]; then
+    echo "error: packages not specified."
+    exit 1
+fi
+
+package_path_1=packages/$package_1
+package_path_2=packages/$package_2
+
+if ! [ -d "$package_path_1" ] || ! [ -d "$package_path_2" ]; then
+    echo "error: the provided package does not exist."
+    exit 1
+fi
+
+package_header=$package_path_1/headers
+
+if ! [ -d "$package_header" ]; then
+    echo "error: the provided package does not have a header."
+    exit 1
+fi
+
+echo "Linking: '$package_header' to '$package_path_2/$package_1'"
+ln -sr $package_header "$package_path_2/$package_1"
+rm -rf $package_header/headers

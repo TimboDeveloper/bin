@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "stdio.h": "c",
+        "in.h": "c",
+        "socket.h": "c",
+        "istream": "c",
+        "stop_token": "c",
+        "thread": "c",
+        "core.h": "c",
+        "request.h": "c",
+        "span": "c",
+        "stdbool.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c",
+        "inet.h": "c",
+        "netdb.h": "c",
+        "unistd.h": "c"
+    }
+}
