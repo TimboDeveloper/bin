@@ -1,0 +1,131 @@
+#!/bin/sh
+
+source ./scripts/utils
+
+if [[ $? -gt 0 ]]; then
+    echo "exception: you need to be in the repository path" >&2
+    return
+fi
+
+only_execute_without_source
+
+if [[ $? -gt 0 ]]; then
+    return
+fi
+
+gotoRoot
+
+trigged_help=$(man $@)
+
+if ! [[ -z $trigged_help ]]; then
+    case $trigged_help in
+        create|c)
+            find_man create
+            break
+        ;;
+
+        --verbose|-v)
+            find_man verbose
+            break
+        ;;
+
+        *)
+            if [[ $trigged_help != $0 ]]; then
+                if [[ $trigged_help != --* ]]; then
+                    exception "command '$trigged_help' not found"
+                    echo
+                else
+                    exception "unrecognized option '$trigged_help'"
+                    echo
+                fi
+            fi
+
+            find_man default
+            break
+        ;;
+    esac
+
+    exit 0
+fi
+
+options=$(getopt                        \
+    -o hv                               \
+    --long help,verbose                 \
+    --name "exception"                  \
+    --unquoted                          \
+    -- "$@"
+)
+
+if [[ $? -gt 0 ]]; then
+    echo
+    find_man default
+    exit $?
+fi
+
+eval set -- "$options"
+
+temporary_options=()
+
+for option in $options; do
+    if [[ $option != '--' ]]; then
+        temporary_options+=("$option")
+    fi
+done
+
+set -- ${temporary_options[@]}
+
+while true; do
+    case $1 in
+        --verbose|-v)
+            shift
+            readonly BINARA_VERBOSE_MODE=true
+        ;;
+        *)
+            break
+        ;;
+    esac
+done
+
+readonly command=$1
+
+if [[ -z $command ]]; then
+    find_man default
+    exit 128
+fi
+
+shift
+
+readonly args=$@
+
+show_help_if_empty_args
+
+while true; do
+    case $command in
+        create|c)
+            define_max_args 1
+            package_name=$1
+
+            if [[ -d "$PACKAGE_DIR/$package_name" ]]; then
+                exception "the package '$package_name' already exists"
+                exit 1
+            fi
+
+            mkdir -p "$PACKAGE_DIR/$package_name"
+            mkdir -p "$PACKAGE_DIR/$package_name/$HEADERS_DIR"
+
+            touch "$PACKAGE_DIR/$package_name/$C_MAIN_FILE.c"
+            break
+        ;;
+
+        *)
+            if ! [[ -z $command ]]; then
+                exception "command '$command' not found"
+                echo
+            fi
+
+            find_man default
+
+            break
+        ;;
+    esac
+done

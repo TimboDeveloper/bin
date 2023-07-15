@@ -1,0 +1,197 @@
+#!/bin/sh
+
+PACKAGE_DIR="packages"
+HEADERS_DIR="headers"
+C_MAIN_FILE="main"
+
+gotoRoot() {
+    cd $(realpath $(dirname $(realpath "$0"))/../)
+}
+
+isNumber() {
+    local value=${1}
+    local regex='^[+-]?[0-9]+([.][0-9]+)?$'
+
+    if [[ $value =~ $regex ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+has_outrun() {
+    local max_args=${1}
+    local num_args=$(($# - 1))
+
+    if ! isNumber $max_args; then
+        exception "the provided value '$max_args' is not a number"
+        exit 1
+    fi
+
+    if [ $max_args -ge $num_args ]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+is_out_scope() {
+    local variable=${1}
+
+    if [[ -z $variable ]]; then
+        exception "execution function is out of scope"
+        exit 126
+    fi
+}
+
+show_help_if_empty_args() {
+    if [[ -z $args ]]; then
+        is_out_scope $command
+
+        find_man $command
+        exit 128
+    fi
+}
+
+define_max_args() {
+    local max_args=${1}
+
+    is_out_scope $args
+    is_out_scope $command
+
+    if has_outrun $max_args $args; then
+        exception "the '$command' command expects $max_args argument"
+        echo
+        find_man $command
+        exit 128
+    fi
+}
+
+request_accept() {
+    ask() {    
+        printf "Do you really want to do this? (y/n): "
+    }
+
+    if [[ -z $YES_MODE ]]; then
+        ask
+        while true; do
+            read input
+            uppercase_input=${input^^}
+
+            case $uppercase_input in
+                YES|Y)
+                    return 0
+                    break
+                ;;
+                NO|N)
+                    echo "Operation cancelled"
+                    return 1
+                    break
+                ;;
+                *)
+                    if [[ $uppercase_input == '' ]]; then
+                        echo "Operation cancelled"
+                        return 1
+                        break
+                    fi
+                    exception "wrong response. Please answer with yes or no"
+                    ask
+                ;;
+            esac
+        done
+    fi
+}
+
+man() {
+    for ((i=0; i<=${#@}; i++)); do
+        case ${@:i:1} in
+            --help | -h)
+                last_argument=$((i - 1))
+                echo ${@:$last_argument:1}
+                break
+            ;;
+        esac
+    done
+}
+
+find_man() {
+    local help_target=${1}
+    local help_file="./scripts/man.md"
+
+    if [ ! -f "$help_file" ]; then
+        exception "help messages files is not avaliable"
+        exit 1
+    fi
+
+    man_content=$(cat $help_file)
+
+    if [[ $man_content =~ \[group-start\]:\ \<\>\ \($help_target\) ]]; then
+        extracted_text=$(echo "$man_content)" | sed -n "/\[group-start\]: <> ($help_target)/,/\[group-end\]: <> ($help_target)/ { /(\[group-start\]|\[group-end\]): <> ($help_target)/!p }" | sed '1d;$d')
+        echo "$extracted_text"
+    else
+        exception "cannot find '$help_target' help message"
+    fi
+}
+
+verbose() {
+    local message=$@
+
+    if [[ $BINARA_VERBOSE_MODE == true ]]; then
+        echo "$message"
+    fi
+}
+
+info() {
+    local message=$@
+
+    echo "$message"
+}
+
+exception() {
+    local message=$@
+    local prefix='exception:'
+
+    echo "$prefix $message" >&2
+}
+
+has_sourced() {
+    if [ -n "$ZSH_VERSION" ]; then
+        case $ZSH_EVAL_CONTEXT in 
+        *:file*)
+            echo true
+            return
+        ;;
+        esac
+    else
+        case ${0##*/} in
+        dash|-dash|bash|-bash|ksh|-ksh|sh|-sh) 
+            echo true
+            return
+        ;; 
+        esac
+    fi
+    echo false
+    return
+}
+
+only_execute_with_source() {
+    local is_sourced=$(has_sourced)
+
+    if [[ $is_sourced != true ]]; then
+        exception "this script only works with source command"
+        return 1
+    fi
+
+    return 0
+}
+
+only_execute_without_source() {
+    local is_sourced=$(has_sourced)
+
+    if [[ $is_sourced != false ]]; then
+        exception "this script only works without source command"
+        return 1
+    fi
+
+    return 0
+}

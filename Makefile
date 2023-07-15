@@ -1,41 +1,53 @@
-PACKAGES_DIR := packages
-BUILD_DIR := build
-HEADER_DIR := header
-BIN_DIR := bin
+# DIRECTORIES
+LIB_DIR := lib
+DEV_DIR := dev
+SO_DIR := shared
 CORE_DIR := core
+PACKAGE_DIR := packages
 
-LIB_DEPS := -lcurl
-DEPENDENCIES_FILE := dependencies.txt
-DEPENDENCIES_SHELL_SCRIPT := scripts/dependencies.sh
+# CHECK-ARGUMENTS
+SO_FILES_TO_SEARCH := $(shell find $() -type f)
 
-SOURCE_FILES := $(shell find $(PACKAGES_DIR) -wholename "**.c*" -type f)
-BUILD_FILES := $(SOURCE_FILES:$(PACKAGES_DIR)/%.c=$(BUILD_DIR)/%.o)
-BIN_FILES := $(BUILD_FILES:$(BUILD_DIR)/%.o=$(BIN_DIR)/%)
-FILTERED_BIN_FILES := $(filter-out $(BIN_DIR)/$(CORE_DIR)/%,$(BIN_FILES))
+# BUILD VARS
+# packages/**/*.c
+CFILES := $(shell find $(PACKAGE_DIR) -wholename "***/*.c*" -type f)
 
-all: folders compile binary
+# lib/shared/**/*.so
+SOFILES := $(CFILES:$(PACKAGE_DIR)/%.c=$(LIB_DIR)/$(SO_DIR)/%.so)
 
-folders: $(PACKAGES_DIR) $(BUILD_DIR) $(BIN_DIR)
+# lib/packages/**/*
 
-compile: $(BUILD_FILES)
+BFILES := $(CFILES:$(PACKAGE_DIR)/%.c=$(LIB_DIR)/$(PACKAGE_DIR)/%)
 
-binary: $(FILTERED_BIN_FILES)
+.PHONY: dev
+dev: mkdir build
+	@echo builded
 
-$(BIN_DIR)/%: $(BUILD_DIR)/%.o $(DEPENDENCIES_FILE)
-	$(eval TEMP := $(shell $(DEPENDENCIES_SHELL_SCRIPT) $(DEPENDENCIES_FILE) $@ $(BUILD_DIR) $(shell find $(BUILD_DIR) -wholename "**.o*" -type f)))
-	mkdir -p $(dir $@)
-	gcc $(TEMP) $< -o $@ $(LIB_DEPS)
+.PHONY: dev_watch
+dev_watch:
+	@watch --interval 1 $(MAKE) dev
+
+.PHONY: build
+build:
+	@echo $(CFILES)
 	@echo
-	@ls -lhs $@
+	@echo $(SOFILES)
+	@echo
+	@echo $(BFILES)
 
-$(PACKAGES_DIR) $(BUILD_DIR) $(BIN_DIR):
-	mkdir -p $@
+.PHONY: mkdir
+mkdir:
+	mkdir --parents $(LIB_DIR)
+	mkdir --parents $(LIB_DIR)/$(DEV_DIR)
+	mkdir --parents $(LIB_DIR)/$(SO_DIR)
+	mkdir --parents $(LIB_DIR)/$(PACKAGE_DIR)
 
-$(BUILD_DIR)/%.o: $(PACKAGES_DIR)/%.c
-	mkdir -p $(dir $@)
-	gcc $(CFLAGS) -c $< -o $@
-
-clean:
-	rm -rf $(BUILD_DIR) $(BIN_DIR)
-
-.PHONY: all folders compile binary
+.PHONY: checkLibs
+checkLibs:
+ifeq ($(SO_FILES_TO_SEARCH),)
+	@echo "error: no shared object file has provided"
+	@echo "Usage: make checkLibs SO_FILES_TO_SEARCH=\"FILE FILE...\""
+	@echo
+	@exit 1
+endif
+	@echo "$(SO_FILES_TO_SEARCH)"

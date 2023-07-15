@@ -1,30 +1,30 @@
 #!/bin/sh
 
-if ! [ -z $ALREADY_EXPORTED ]; then
-    echo "error: the packages already been exported"
-    echo "restart the environment process first"
+source ./scripts/utils
+
+if [[ $? -gt 0 ]]; then
+    echo "error: you need to be in the repository path" >&2
+    return
 fi
 
-addPath() {
-    local filePath=${1}
+only_execute_with_source
 
-    if ! [ -d "$filePath" ]; then
-        echo "error: the provided file '$filePath' does not exist"
-    fi
-
-    echo "Exporting: '$filePath'"
-    export PATH="$filePath:$PATH"
-}
-
-if ! [ -d "$PWD/bin" ]; then
-    echo "error: the bin directory does not exist"
-    echo "please run the Makefile first"
+if [[ $? -gt 0 ]]; then
+    exit 1
 fi
 
-bin_targets=$(sh -c "ls $PWD/bin")
+if ! [[ -z $BINARA_EXPORTED_PATHS ]]; then
+    error "paths are already exported"
+    return 1;
+fi
 
-addPath $PWD/scripts
+dirs=(
+    scripts
+)
 
-for bin in $bin_targets; do
-    addPath $PWD/bin/$bin
+for dir in $dirs; do
+    info "add to path: $dir"
+    export PATH="$dir:$PATH"
 done
+
+BINARA_EXPORTED_PATHS=true
