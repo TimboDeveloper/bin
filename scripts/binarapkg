@@ -24,8 +24,23 @@ if ! [[ -z $trigged_help ]]; then
             break
         ;;
 
+        delete|del)
+            find_man delete
+            break
+        ;;
+
         --verbose|-v)
             find_man verbose
+            break
+        ;;
+        
+        --force)
+            find_man force
+            break
+        ;;
+
+        --yes)
+            find_man yes
             break
         ;;
 
@@ -50,7 +65,7 @@ fi
 
 options=$(getopt                        \
     -o hv                               \
-    --long help,verbose                 \
+    --long help,verbose,force,yes       \
     --name "exception"                  \
     --unquoted                          \
     -- "$@"
@@ -80,6 +95,17 @@ while true; do
             shift
             readonly BINARA_VERBOSE_MODE=true
         ;;
+        
+        --force)
+            shift
+            readonly BINARA_FORCE_MODE=true
+        ;;
+
+        --yes)
+            shift
+            readonly BINARA_YES_MODE=true
+        ;;
+
         *)
             break
         ;;
@@ -106,14 +132,23 @@ while true; do
             package_name=$1
 
             if [[ -d "$PACKAGE_DIR/$package_name" ]]; then
-                exception "the package '$package_name' already exists"
-                exit 1
+                if ! [[ $BINARA_FORCE_MODE ]]; then
+                    exception "the package '$package_name' already exists"
+                    exit 1
+                fi
+
+                if ! request_accept; then
+                    exit 0
+                fi
             fi
+            
+            create_dir "$PACKAGE_DIR/$package_name" -p 
+            create_dir "$PACKAGE_DIR/$package_name/$HEADERS_DIR" -p
+            create_file "$PACKAGE_DIR/$package_name/$C_MAIN_FILE.c"
 
-            mkdir -p "$PACKAGE_DIR/$package_name"
-            mkdir -p "$PACKAGE_DIR/$package_name/$HEADERS_DIR"
+            verbose ""
 
-            touch "$PACKAGE_DIR/$package_name/$C_MAIN_FILE.c"
+            echo "package '$package_name' has been created"
             break
         ;;
 

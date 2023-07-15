@@ -53,6 +53,24 @@ show_help_if_empty_args() {
     fi
 }
 
+create_dir() {
+    local dir_path=${1}
+    shift
+    local mkdir_args=$@
+    
+    verbose "mkdir: '$dir_path'"
+    mkdir $mkdir_args $dir_path
+}
+
+create_file() {
+    local file_path=${1}
+    shift
+    local touch_args=$@
+
+    verbose "touch: '$file_path'"
+    touch $touch_args $file_path
+}
+
 define_max_args() {
     local max_args=${1}
 
@@ -69,10 +87,10 @@ define_max_args() {
 
 request_accept() {
     ask() {    
-        printf "Do you really want to do this? (y/n): "
+        printf "Do you really want to do this? (y/N): "
     }
 
-    if [[ -z $YES_MODE ]]; then
+    if [[ -z $BINARA_YES_MODE ]]; then
         ask
         while true; do
             read input
@@ -94,7 +112,7 @@ request_accept() {
                         return 1
                         break
                     fi
-                    exception "wrong response. Please answer with yes or no"
+                    exception "wrong response. Answer with yes or no"
                     ask
                 ;;
             esac
