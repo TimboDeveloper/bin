@@ -3,6 +3,8 @@
 PACKAGE_DIR="packages"
 HEADERS_DIR="headers"
 C_MAIN_FILE="main"
+DEPENDENCY_FILE="dependencies.yml"
+DEPENDENCY_FILE_PREFIX="dependencies:"
 
 gotoRoot() {
     cd $(realpath $(dirname $(realpath "$0"))/../)
@@ -29,6 +31,38 @@ has_outrun() {
     fi
 
     if [ $max_args -ge $num_args ]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+has_outrun() {
+    local max_args=${1}
+    local num_args=$(($# - 1))
+
+    if ! isNumber $max_args; then
+        exception "the provided value '$max_args' is not a number"
+        exit 1
+    fi
+
+    if [ $max_args -ge $num_args ]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+has_not_equal() {
+    local min_args=${1}
+    local num_args=$(($# - 1))
+
+    if ! isNumber $min_args; then
+        exception "the provided value '$min_args' is not a number"
+        exit 1
+    fi
+
+    if [ $num_args -lt $min_args ]; then
         return 1
     else
         return 0
@@ -62,6 +96,15 @@ create_dir() {
     mkdir $mkdir_args $dir_path
 }
 
+remove_file() {
+    local dir_path=${1}
+    shift
+    local rm_args=$@
+    
+    verbose "rm: '$dir_path'"
+    rm $rm_args $dir_path
+}
+
 create_file() {
     local file_path=${1}
     shift
@@ -71,18 +114,114 @@ create_file() {
     touch $touch_args $file_path
 }
 
+exist_package() {
+    package_path=${1}
+
+    if ! [[ -d "$PACKAGE_DIR/$package_path" ]]; then
+        exception "package '$package_path' not found"
+        exit 1
+    fi
+}
+
+has_dependency() {
+    local target=${1}
+    local dependency_file=${2}
+    local dependency_content=$(cat $dependency_file)
+
+    if [[ "$dependency_content" =~ "$target" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+dependency_add() {
+    local target=${1}
+    local receiver=${2}
+    
+    local dependency_file_path="$receiver/$DEPENDENCY_FILE"
+
+    if [[ ! -f "$dependency_file_path" ]]; then
+        create_file $dependency_file_path
+    fi
+    
+    local dependency_content=$(cat $dependency_file_path)
+
+    if has_dependency "$target" $dependency_file_path; then
+        if ! [[ "$dependency_content" =~ "$DEPENDENCY_FILE_PREFIX" ]]; then
+            exception "malformed dependency file at '$dependency_file_path'"
+            exit 1
+        fi
+
+        verbose "nothing: dependency '$target' already exists at '$(basename $receiver)'"
+
+        return 1
+    else
+        if ! [[ "$dependency_content" =~ "$DEPENDENCY_FILE_PREFIX" ]]; then
+            echo "$DEPENDENCY_FILE_PREFIX" >> "$dependency_file_path"
+        fi
+
+        verbose "echo: '$target' to '$(basename $receiver)'"
+        echo " - $target" >> $dependency_file_path
+    fi
+}
+
 define_max_args() {
     local max_args=${1}
 
     is_out_scope $args
     is_out_scope $command
 
+    if ! [[ -z $subcommand ]]; then
+        local commandName=$subcommand
+        local manCommand=$subcommand_man
+    else
+        local commandName=$command
+        local manCommand=$command
+    fi
+
     if has_outrun $max_args $args; then
-        exception "the '$command' command expects $max_args argument"
-        echo
-        find_man $command
+        exception "the '$commandName' command expects at most $max_args arguments"
+        info
+        find_man $manCommand
         exit 128
     fi
+}
+
+define_min_args() {
+    local min_args=${1}
+
+    is_out_scope $args
+    is_out_scope $command
+
+    if ! [[ -z $subcommand ]]; then
+        local commandName=$subcommand
+        local manCommand=$subcommand_man
+    else
+        local commandName=$command
+        local manCommand=$command
+    fi
+
+    if ! has_not_equal $min_args $args; then
+        exception "the '$commandName' command expects at least $min_args arguments"
+        info
+        find_man $manCommand
+        exit 128
+    fi
+}
+
+define_args() {
+    local min_args=${1}
+    local max_args=${2}
+
+    define_min_args $min_args
+    define_max_args $max_args
+}
+
+set_args() {
+    local args_amount=${1}
+    
+    define_args $args_amount $args_amount
 }
 
 request_accept() {
@@ -154,7 +293,7 @@ find_man() {
 verbose() {
     local message=$@
 
-    if [[ $BINARA_VERBOSE_MODE == true ]]; then
+    if [[ $BINARA_VERBOSE_MODE ]]; then
         echo "$message"
     fi
 }
@@ -162,7 +301,9 @@ verbose() {
 info() {
     local message=$@
 
-    echo "$message"
+    if ! [[ $BINARA_QUIET_MODE ]]; then    
+        echo "$message"
+    fi
 }
 
 exception() {

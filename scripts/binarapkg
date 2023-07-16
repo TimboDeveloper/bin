@@ -29,6 +29,36 @@ if ! [[ -z $trigged_help ]]; then
             break
         ;;
 
+        link|ln)
+            find_man link
+            break
+        ;;
+
+        removelink|rmlink|rmln)
+            find_man removelink
+            break
+        ;;
+
+        dependency|dep)
+            find_man dependency
+            break
+        ;;
+
+        a|add)
+            while true; do
+                case $1 in
+                    dependency|dep)
+                        find_man dependency_add
+                        break
+                    ;;
+                    *)
+                        shift
+                    ;;
+                esac
+            done
+            break
+        ;;
+
         --verbose|-v)
             find_man verbose
             break
@@ -44,14 +74,19 @@ if ! [[ -z $trigged_help ]]; then
             break
         ;;
 
+        --quiet|-q)
+            find_man quiet
+            break
+        ;;
+
         *)
             if [[ $trigged_help != $0 ]]; then
                 if [[ $trigged_help != --* ]]; then
                     exception "command '$trigged_help' not found"
-                    echo
+                    info
                 else
                     exception "unrecognized option '$trigged_help'"
-                    echo
+                    info
                 fi
             fi
 
@@ -63,16 +98,16 @@ if ! [[ -z $trigged_help ]]; then
     exit 0
 fi
 
-options=$(getopt                        \
-    -o hv                               \
-    --long help,verbose,force,yes       \
-    --name "exception"                  \
-    --unquoted                          \
+options=$(getopt                                \
+    -o hvq                                      \
+    --long help,verbose,force,yes,quiet         \
+    --name "exception"                          \
+    --unquoted                                  \
     -- "$@"
 )
 
 if [[ $? -gt 0 ]]; then
-    echo
+    info
     find_man default
     exit $?
 fi
@@ -104,6 +139,11 @@ while true; do
         --yes)
             shift
             readonly BINARA_YES_MODE=true
+        ;;
+
+        --quiet|-q)
+            shift
+            readonly BINARA_QUIET_MODE=true
         ;;
 
         *)
@@ -148,18 +188,143 @@ while true; do
 
             verbose ""
 
-            echo "package '$package_name' has been created"
+            info "package '$package_name' has been created"
+            break
+        ;;
+
+        delete|del)
+            define_max_args 1
+            package_name=$1
+
+            exist_package $package_name
+
+            if ! request_accept; then
+                exit 0
+            fi
+
+            verbose "rm: '$PACKAGE_DIR/$package_name'"
+            rm -rf "$PACKAGE_DIR/$package_name"
+
+            verbose ""
+
+            info "package '$package_name' has been removed"
+            break
+        ;;
+
+        link|ln)
+            set_args 2
+
+            target_package=${1}
+            receiver_package=${2}
+
+            exist_package $target_package
+            exist_package $receiver_package
+
+            if [[ -d "$PACKAGE_DIR/$receiver_package/$target_package" ]]; then
+                exception "symbolic link already exists in '$receiver_package'"
+                exit 1
+            fi
+
+            if ! [[ -d "$PACKAGE_DIR/$target_package/$HEADERS_DIR" ]]; then
+                exception "$HEADERS_DIR folder not found from '$target_package'"
+                exit 1
+            fi
+
+            verbose "link: '$PACKAGE_DIR/$target_package' to '$PACKAGE_DIR/$receiver_package'"
+            ln -sr $PACKAGE_DIR/$target_package/$HEADERS_DIR $PACKAGE_DIR/$receiver_package/$target_package
+
+            verbose ""
+
+            info "symbolic link '$target_package' has been created in '$receiver_package'"
+
+            break
+        ;;
+
+        removelink|rmlink|rmln)
+            set_args 2
+
+            target_package=${1}
+            receiver_package=${2}
+
+            exist_package $target_package
+            exist_package $receiver_package
+            
+            if [[ -d "$PACKAGE_DIR/$receiver_package/$target_package" ]]; then
+                remove_file "$PACKAGE_DIR/$receiver_package/$target_package" -f
+            else
+                exception "symbolic link '$target_package' not found in '$receiver_package'"
+                exit 1
+            fi
+
+            verbose ""
+            info "symbolic link '$target_package' has been removed from '$receiver_package'"
+
+            break
+        ;;
+
+        dependency|dep)
+            readonly subcommand=${1}
+
+            case $subcommand in
+                add|a)
+                    subcommand_man="dependency_add"
+                    set_args 3
+                    shift
+
+                    target_dependency=${1}
+                    target_path="$PACKAGE_DIR/$target_dependency"
+
+                    receiver_package=${2}
+                    receiver_path="$PACKAGE_DIR/$receiver_package"
+    
+                    exist_package $receiver_package
+
+                    if ! [[ -f "$target_path" || -d "$receiver_path" ]]; then
+                        exception "the provided dependency '$receiver_path' not found"
+                        exit 1
+                    fi
+
+                    if [[ -f $target_path ]]; then
+                        dependency_add $target_path $receiver_path
+
+                        if [[ $? =~ 0 ]]; then
+                            info "Dependency '$target_dependency' has been added to $receiver_package"
+                        else
+                            info "Nothing changed"
+                        fi
+                    fi
+
+                    if [[ -d $target_path ]]; then
+                        dependency_files_target=$(find $target_path -maxdepth 1 -not -name "$DEPENDENCY_FILE" -type f)
+                        dependency_changed=()
+
+                        for dependency_file_target in $dependency_files_target; do
+                            dependency_add $dependency_file_target $receiver_path
+                            dependency_changed+=$?
+                        done
+
+                        if [[ "$dependency_changed" =~ 0 ]]; then
+                            info "Dependency '$target_dependency' has been added to $receiver_package"
+                        else
+                            info "Nothing changed"
+                        fi
+                    fi
+                    break
+                ;;
+            esac
+
+            exit 127
+
             break
         ;;
 
         *)
             if ! [[ -z $command ]]; then
                 exception "command '$command' not found"
-                echo
+                info
             fi
 
             find_man default
-
             break
         ;;
     esac
