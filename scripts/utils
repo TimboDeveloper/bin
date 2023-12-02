@@ -10,6 +10,12 @@ gotoRoot() {
     cd $(realpath $(dirname $(realpath "$0"))/../)
 }
 
+rerun() {
+    local binara_args=$@
+
+    $0 $defined_options $binara_args
+}
+
 isNumber() {
     local value=${1}
     local regex='^[+-]?[0-9]+([.][0-9]+)?$'

@@ -1,0 +1,5 @@
+dependencies:
+ - packages/core/language.c
+ - packages/core/core.c
+ - packages/core/other.c
+ - packages/core/command.c
